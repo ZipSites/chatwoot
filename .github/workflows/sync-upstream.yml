@@ -1,0 +1,35 @@
+name: Sync from upstream Chatwoot
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Add upstream & fetch
+        run: |
+          git remote add upstream https://github.com/chatwoot/chatwoot.git || true
+          git fetch upstream --tags
+      - name: Detect upstream default branch
+        id: head
+        run: |
+          UB=$(git remote show upstream | awk '/HEAD branch/ {print $NF}')
+          echo "UB=$UB" >> $GITHUB_OUTPUT
+      - name: Ensure develop exists & fast-forward it
+        run: |
+          UB="${{ steps.head.outputs.UB }}"
+          git checkout -B "${UB}" "upstream/${UB}"
+          git push origin "${UB}"
